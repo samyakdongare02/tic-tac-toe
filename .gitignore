@@ -1,0 +1,21 @@
+# Android / Gradle build outputs
+.gradle/
+build/
+local.properties
+captures/
+
+# Signing material must NEVER be committed
+*.keystore
+*.jks
+keystore.properties
+
+# IDE / editor
+.idea/
+*.iml
+.vscode/
+
+# Node
+node_modules/
+
+# Logs
+*.log
