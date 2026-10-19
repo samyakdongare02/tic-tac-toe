@@ -176,25 +176,18 @@ jobs:
           api-level: 34
           target: google_apis
           arch: x86_64
+          # NOTE: android-emulator-runner v2.x executes each script line in its
+          # own `sh -c` shell (see src/main.ts + src/script-parser.ts in the
+          # action repo), so shell variables do NOT persist between lines.
+          # Keep every command self-contained on a single line.
           script: |
-            set -e
-            APK_FILE=$(find artifact -name '*.apk' | head -n 1)
-            echo "Installing $APK_FILE"
-            adb install -r "$APK_FILE"
-            adb shell am start -W -n com.samyakdongare.tictactoe/.MainActivity | tee launch.txt
-            grep -q "Status: ok" launch.txt
+            adb install -r "$(find artifact -name '*.apk' | head -n 1)"
+            adb shell am start -W -n com.samyakdongare.tictactoe/.MainActivity | tee launch.txt && grep -q "Status: ok" launch.txt
             sleep 8
-            PID=$(adb shell pidof com.samyakdongare.tictactoe || true)
-            echo "app pid: $PID"
-            [ -n "$PID" ] || { echo "FAIL: app process is not running"; exit 1; }
+            [ -n "$(adb shell pidof com.samyakdongare.tictactoe)" ] || { echo "FAIL: app process is not running"; exit 1; }
             adb shell dumpsys package com.samyakdongare.tictactoe | grep -m1 versionName
-            if adb logcat -d | grep -A4 "FATAL EXCEPTION" | grep -q "com.samyakdongare.tictactoe"; then
-              echo "FAIL: crash detected for our process"
-              adb logcat -d | grep -A20 "FATAL EXCEPTION"
-              exit 1
-            fi
-            adb exec-out screencap -p > game-screen.png
-            ls -la game-screen.png
+            if adb logcat -d | grep -A4 "FATAL EXCEPTION" | grep -q "com.samyakdongare.tictactoe"; then echo "FAIL: crash detected for our process"; adb logcat -d | grep -A20 "FATAL EXCEPTION"; exit 1; fi
+            adb exec-out screencap -p > game-screen.png && ls -la game-screen.png
 
       - name: Upload runtime screenshot
         uses: actions/upload-artifact@v7
