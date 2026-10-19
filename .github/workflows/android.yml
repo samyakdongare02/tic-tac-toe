@@ -1,0 +1,102 @@
+name: Android APK
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Install Android SDK packages
+        run: |
+          SDKMGR="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ -x "$SDKMGR" ]; then
+            yes | "$SDKMGR" --licenses > /dev/null || true
+            "$SDKMGR" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+          else
+            echo "sdkmanager not found - AGP will download SDK components automatically"
+          fi
+
+      - name: Generate launcher icon from SVG
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq librsvg2-bin
+          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
+          rsvg-convert -w 192 -h 192 icon.svg -o android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+
+      - name: Bundle web app into Android assets
+        run: |
+          mkdir -p android/app/src/main/assets
+          cp index.html script.js style.css icon.svg manifest.webmanifest sw.js android/app/src/main/assets/
+
+      - name: Prepare signing keystore (ephemeral when secrets are absent)
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          SECRET_STORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          SECRET_KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          SECRET_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          KS="$RUNNER_TEMP/release.keystore"
+          if [ -n "$KEYSTORE_B64" ]; then
+            printf '%s' "$KEYSTORE_B64" | base64 -d > "$KS"
+            STOREPASS="$SECRET_STORE_PASS"
+            KEYPASS="$SECRET_KEY_PASS"
+            ALIAS="$SECRET_ALIAS"
+          else
+            echo "No keystore secrets found - generating an ephemeral key"
+            keytool -genkeypair -keystore "$KS" -alias key0 \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass android123 -keypass android123 \
+              -dname "CN=Tic-Tac-Toe, OU=GitHub Actions"
+            STOREPASS=android123
+            KEYPASS=android123
+            ALIAS=key0
+          fi
+          {
+            echo "ANDROID_KEYSTORE_FILE=$KS"
+            echo "ANDROID_KEYSTORE_PASSWORD=$STOREPASS"
+            echo "ANDROID_KEY_PASSWORD=$KEYPASS"
+            echo "ANDROID_KEY_ALIAS=$ALIAS"
+          } >> "$GITHUB_ENV"
+
+      - name: Build signed release APK
+        working-directory: android
+        run: gradle assembleRelease
+
+      - name: Collect APK
+        run: cp android/app/build/outputs/apk/release/app-release.apk TicTacToe-1.0.0.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: TicTacToe-1.0.0-apk
+          path: TicTacToe-1.0.0.apk
+          if-no-files-found: error
+
+      - name: Attach to a GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v3
+        with:
+          files: TicTacToe-1.0.0.apk

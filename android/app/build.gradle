@@ -1,0 +1,39 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.samyakdongare.tictactoe'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.samyakdongare.tictactoe'
+        minSdk 24
+        targetSdk 35
+        versionCode 1
+        versionName '1.0.0'
+    }
+
+    signingConfigs {
+        release {
+            // Provided by CI: an ephemeral key is generated when the
+            // ANDROID_KEYSTORE_* secrets are not configured.
+            storeFile file(System.getenv('ANDROID_KEYSTORE_FILE') ?: 'missing.keystore')
+            storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+            keyAlias System.getenv('ANDROID_KEY_ALIAS')
+            keyPassword System.getenv('ANDROID_KEY_PASSWORD')
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
