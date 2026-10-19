@@ -1,5 +1,8 @@
-/* Service worker — enables offline play + installability (PWA). */
-const CACHE = "tic-tac-toe-v2";
+/* Service worker — offline app-shell cache.
+ * Hosted PWA: enables offline play + installability.
+ * Android APK: served from the secure appassets origin, so it activates there
+ * too; offline play also works without it, since assets ship with the app. */
+const CACHE = "tic-tac-toe-v3";
 
 const ASSETS = [
   "./",
@@ -44,7 +47,7 @@ self.addEventListener("fetch", (event) => {
           caches.open(CACHE).then((cache) => cache.put(event.request, copy));
         }
         return response;
-      });
+      }).catch(() => caches.match("./index.html"));   // network failed: offline navigation fallback
     })
   );
 });

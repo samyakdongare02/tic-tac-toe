@@ -4,7 +4,7 @@
  * the "cells frozen after the AI move" bug once escaped testing).
  * Runs with: node tests/tictac.test.js
  */
-const { loadGame } = require("./harness");
+const { loadGame, makeStorage } = require("./harness");
 const { T, els, cells, bd } = loadGame();
 
 /* ---------- helpers ---------- */
@@ -102,6 +102,72 @@ function check(name, cond, extra = "") {
     if (/(wins|tie)/.test(els.status.textContent)) break;
   }
   check("hard AI never loses to this line", !xWins, `status="${els.status.textContent}"`);
+
+  console.log("\n=== TEST 7 (Fix 1): win highlight removed on New Game and mode change ===");
+  els.mode.value = "pvp"; els.mode.fire("change");
+  click(0); click(3); click(1); click(4); click(2);   // X wins top row
+  let winCells = cells.filter((c) => c.classList.contains("win")).length;
+  check("winning cells highlighted (.win) during the win", winCells === 3, `${winCells} highlighted`);
+  els.restart.fire("click");
+  winCells = cells.filter((c) => c.classList.contains("win")).length;
+  check("no .win remains after New Game", winCells === 0, `${winCells} highlighted`);
+  click(0); click(3); click(1); click(4); click(2);   // X wins again
+  els.mode.value = "ai-hard"; els.mode.fire("change");
+  winCells = cells.filter((c) => c.classList.contains("win")).length;
+  check("no .win remains after mode change", winCells === 0, `${winCells} highlighted`);
+
+  console.log("\n=== TEST 8 (Fix 3): scoreboard survives an app relaunch ===");
+  const SCORES_KEY = "tictactoe.scores.v1";
+  const shared = makeStorage();
+  const g1 = loadGame({ storage: shared });            // first "app run"
+  g1.els.mode.value = "pvp"; g1.els.mode.fire("change");
+  g1.cells[0].fire("click"); g1.cells[3].fire("click"); g1.cells[1].fire("click");
+  g1.cells[4].fire("click"); g1.cells[2].fire("click"); // X wins
+  let saved = shared.getItem(SCORES_KEY);
+  check("scores written to localStorage on win", saved !== null && typeof saved === "string" && JSON.parse(saved).X === 1, `${saved}`);
+  const g2 = loadGame({ storage: shared });            // second "app run" (relaunch)
+  check("relaunch restores totals (X=1)", g2.els.scoreX.textContent === "1", `X=${g2.els.scoreX.textContent}`);
+  check("relaunch restores totals (O=0, tie=0)", g2.els.scoreO.textContent === "0" && g2.els.scoreDraw.textContent === "0", `O=${g2.els.scoreO.textContent} tie=${g2.els.scoreDraw.textContent}`);
+
+  console.log("\n=== TEST 8b (Fix 3): corrupt saved data starts fresh at 0,0,0 ===");
+  const badStore = makeStorage();
+  badStore.setItem(SCORES_KEY, "{corrupted json!");
+  const g3 = loadGame({ storage: badStore });
+  check("corrupt storage -> boots with 0,0,0",
+    g3.els.scoreX.textContent === "0" && g3.els.scoreO.textContent === "0" && g3.els.scoreDraw.textContent === "0",
+    `X=${g3.els.scoreX.textContent} O=${g3.els.scoreO.textContent} tie=${g3.els.scoreDraw.textContent}`);
+
+  console.log("\n=== TEST 8c (Fix 3): throwing storage must not crash startup ===");
+  const throwStore = makeStorage();
+  throwStore.failing = true;
+  const g4 = loadGame({ storage: throwStore });
+  check("throwing storage -> boots with 0,0,0",
+    g4.els.scoreX.textContent === "0" && g4.els.scoreO.textContent === "0" && g4.els.scoreDraw.textContent === "0",
+    `X=${g4.els.scoreX.textContent} O=${g4.els.scoreO.textContent} tie=${g4.els.scoreDraw.textContent}`);
+
+  console.log("\n=== TEST 8d (Fix 3): mode change still zeroes and re-persists ===");
+  g2.els.mode.value = "ai-hard"; g2.els.mode.fire("change");
+  check("mode change zeroes the scoreboard", g2.els.scoreX.textContent === "0", `X=${g2.els.scoreX.textContent}`);
+  const afterModeChange = JSON.parse(shared.getItem(SCORES_KEY));
+  check("mode change re-persists zeros", afterModeChange.X === 0 && afterModeChange.O === 0 && afterModeChange.draw === 0, `${shared.getItem(SCORES_KEY)}`);
+
+  console.log("\n=== TEST 9: rapid clicks during 'AI is thinking…' ===");
+  els.mode.value = "ai-hard"; els.mode.fire("change");
+  click(0); click(1); click(2);      // 1st lands; the other two hit disabled cells
+  await sleep(500);                  // AI places O
+  const m1 = marks();
+  const xs = T.getBoard().filter((v) => v === "X").length;
+  const os = T.getBoard().filter((v) => v === "O").length;
+  check("no duplicate marks from swallowed rapid clicks", m1 === 2 && xs === 1 && os === 1, `marks=${m1} X=${xs} O=${os}`);
+  const nextEmpty = T.getBoard().findIndex((v) => v === "");
+  click(nextEmpty);                  // game continues after the burst
+  await sleep(500);
+  check("AI responds after the burst (game not stuck)", marks() === m1 + 2 && els.status.textContent === "Your turn", `marks=${marks()} status="${els.status.textContent}"`);
+
+  console.log("\n=== TEST 10 (Fix 4 acceptance): classic trap — X has centre+corner, O took an edge ===");
+  T.setBoard(bd("XO..X...."));       // X@4 centre, O@1 edge, X@0 corner; O to move
+  const trap = T.minimaxMove(T.getBoard());
+  check("hard AI blocks the diagonal at corner 8 (not an edge)", trap === 8, `got ${trap}`);
 
   console.log(`\n===== ${pass} passed, ${fail} failed =====`);
   process.exit(fail === 0 ? 0 : 1);

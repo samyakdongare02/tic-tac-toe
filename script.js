@@ -23,7 +23,9 @@
   let board = Array(9).fill("");     // "", "X", "O"
   let current = HUMAN;               // whose mark is next (human= X, ai= O)
   let running = true;                // game still in progress
+  const SCORES_KEY = "tictactoe.scores.v1";  // persisted scoreboard (Fix 3)
   let scores = { X: 0, O: 0, draw: 0 };
+  let scoresRestored = false;        // false until loadScores() ran once (guards Fix 3)
   let aiTimer = null;                // pending AI move (cancelled on restart)
 
   /* ---------- helpers ---------- */
@@ -57,6 +59,7 @@
       cell.textContent = board[i];
       cell.classList.toggle("x", board[i] === "X");
       cell.classList.toggle("o", board[i] === "O");
+      cell.classList.remove("win");   // clear residual win highlight (New Game / mode change)
       cell.disabled = !!board[i];   // occupied cells are not clickable (was inverted!)
     });
   }
@@ -71,6 +74,27 @@
     scoreX.textContent = scores.X;
     scoreO.textContent = scores.O;
     scoreDraw.textContent = scores.draw;
+    persistScores();
+  }
+
+  // Fix 3: keep the scoreboard across app restarts via localStorage.
+  // Guarded access: storage can be unavailable or throw in some contexts.
+  function persistScores() {
+    if (!scoresRestored) return;     // the startup reset must not clobber saved totals
+    try { localStorage.setItem(SCORES_KEY, JSON.stringify(scores)); }
+    catch (_) { /* storage unavailable: scores stay in memory */ }
+  }
+
+  function loadScores() {
+    scoresRestored = true;           // from here on, persisting is safe
+    try {
+      const raw = localStorage.getItem(SCORES_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed && ["X", "O", "draw"].every((k) => typeof parsed[k] === "number")) {
+        scores = parsed;
+      }
+    } catch (_) { /* corrupted or unreadable: start fresh */ }
   }
 
   /* ---------- game flow ---------- */
@@ -126,8 +150,15 @@
   function playAiMove() {
     aiTimer = null;
     if (!running) return;                          // game over / restarted
-    const move = aiBestMove(board);
-    if (!Number.isInteger(move) || board[move]) return;  // safety: valid empty cell
+    let move = aiBestMove(board);
+    if (!Number.isInteger(move) || move < 0 || move > 8 || board[move]) {
+      move = openCells(board)[0];                  // defensive fallback (Fix 4)
+    }
+    if (!Number.isInteger(move) || board[move]) {  // board unexpectedly full
+      current = HUMAN;
+      setStatus("Your turn");
+      return;
+    }
     placeMark(move, "O");
     afterMove();
   }
@@ -257,5 +288,7 @@
   }
 
   // start fresh on load
-  resetAll();
+  resetAll();     // zero board + status
+  loadScores();   // restore saved totals after that
+  updateScores(); // paint restored totals (also re-persists them)
 })();

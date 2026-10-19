@@ -37,7 +37,23 @@ function makeEl(extra = {}) {
   return el;
 }
 
-function loadGame() {
+/* ---------- localStorage mock ----------
+ * Pass a shared mock into loadGame({ storage }) to simulate app relaunches;
+ * set .failing = true to make every access throw (unavailable storage). */
+function makeStorage() {
+  const data = new Map();
+  const mock = {
+    failing: false,                                     // test switch: true -> every access throws
+    getItem(k) { if (mock.failing) throw new Error("storage unavailable"); return data.has(k) ? data.get(k) : null; },
+    setItem(k, v) { if (mock.failing) throw new Error("storage unavailable"); data.set(k, String(v)); },
+    removeItem(k) { if (mock.failing) throw new Error("storage unavailable"); data.delete(k); },
+    clear() { data.clear(); },
+    dump() { return Object.fromEntries(data); },
+  };
+  return mock;
+}
+
+function loadGame(opts = {}) {
   const cells = Array.from({ length: 9 }, (_, i) => makeEl({ dataset: { index: String(i) } }));
   const els = {
     status: makeEl(), board: makeEl(), mode: makeEl({ value: "pvp" }),
@@ -47,6 +63,7 @@ function loadGame() {
     getElementById: (id) => els[id],
     querySelectorAll: (sel) => (sel === ".cell" ? cells : []),
   };
+  const localStorage = opts.storage || makeStorage();
 
   let code = fs.readFileSync(path.join(ROOT, "script.js"), "utf8");
   const hook = `globalThis.__T = {
@@ -56,11 +73,11 @@ function loadGame() {
 };`;
   code = code.replace(/\}\)\(\);\s*$/, hook + "\n})();");
 
-  const ctx = { document, setTimeout, clearTimeout, console };
+  const ctx = { document, setTimeout, clearTimeout, console, localStorage };
   vm.createContext(ctx);
   vm.runInContext(code, ctx);
   if (!ctx.__T) throw new Error("test hook missing — script.js structure changed");
-  return { T: ctx.__T, els, cells, document, bd: (s) => s.split("").map((c) => (c === "." ? "" : c)) };
+  return { T: ctx.__T, els, cells, document, localStorage, bd: (s) => s.split("").map((c) => (c === "." ? "" : c)) };
 }
 
-module.exports = { loadGame };
+module.exports = { loadGame, makeStorage };

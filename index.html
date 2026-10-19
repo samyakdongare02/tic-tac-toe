@@ -56,10 +56,12 @@
   <script src="script.js"></script>
   <script>
     // Register the service worker for offline support / installability.
-    if ("serviceWorker" in navigator) {
+    // A file:// origin is never a secure context, so skip the attempt there;
+    // the Android APK serves the same assets over a secure appassets origin.
+    if ("serviceWorker" in navigator && window.isSecureContext) {
       window.addEventListener("load", () => {
         navigator.serviceWorker.register("sw.js").catch(() => {
-          /* ignore (e.g. non-secure context) */
+          /* degrade silently: assets are bundled, offline still works */
         });
       });
     }
