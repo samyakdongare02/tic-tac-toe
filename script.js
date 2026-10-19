@@ -57,7 +57,7 @@
       cell.textContent = board[i];
       cell.classList.toggle("x", board[i] === "X");
       cell.classList.toggle("o", board[i] === "O");
-      cell.disabled = !board[i];
+      cell.disabled = !!board[i];   // occupied cells are not clickable (was inverted!)
     });
   }
 
@@ -114,7 +114,11 @@
       clearTimeout(aiTimer);
       aiTimer = setTimeout(playAiMove, 350);
     } else {
-      setStatus(current === HUMAN ? "Your turn" : "AI's turn");
+      setStatus(
+        current === HUMAN
+          ? "Your turn"
+          : modeSel.value === "pvp" ? "Player O's turn" : "AI's turn"
+      );
     }
   }
 
@@ -244,7 +248,6 @@
     render();
     updateScores();
     setStatus(`Player ${HUMAN}'s turn`);
-    cells.forEach((c) => (c.disabled = false));
   }
 
   // Full reset (page load / mode change): board + scoreboard to zero.

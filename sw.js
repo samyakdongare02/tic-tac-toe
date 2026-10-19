@@ -1,5 +1,5 @@
 /* Service worker — enables offline play + installability (PWA). */
-const CACHE = "tic-tac-toe-v1";
+const CACHE = "tic-tac-toe-v2";
 
 const ASSETS = [
   "./",
