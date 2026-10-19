@@ -17,6 +17,7 @@ body {
   background: radial-gradient(circle at top, #1e293b, var(--bg));
   color: var(--text);
   min-height: 100vh;
+  min-height: 100dvh;          /* dynamic viewport: correct on Android/iOS toolbars */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -109,6 +110,9 @@ select {
   font-weight: 700;
   color: transparent;
   cursor: pointer;
+  touch-action: manipulation;   /* no double-tap zoom while playing */
+  -webkit-user-select: none;
+  user-select: none;
   transition: transform 0.1s ease, background 0.2s ease;
 }
 
@@ -143,6 +147,7 @@ select {
   font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
+  touch-action: manipulation;
   transition: filter 0.2s ease;
 }
 

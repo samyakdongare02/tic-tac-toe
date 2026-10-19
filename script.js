@@ -24,6 +24,7 @@
   let current = HUMAN;               // whose mark is next (human= X, ai= O)
   let running = true;                // game still in progress
   let scores = { X: 0, O: 0, draw: 0 };
+  let aiTimer = null;                // pending AI move (cancelled on restart)
 
   /* ---------- helpers ---------- */
   function setStatus(msg) { statusEl.textContent = msg; }
@@ -37,18 +38,18 @@
     return null;
   }
 
-  // returns index of a winning move (an empty cell that completes a line) or undefined
-  function winningMove(mark) {
+  // returns index of a winning move (an EMPTY cell that completes a line) or undefined
+  function winningMove(bd, mark) {
     for (const line of LINES) {
       const [a, b, c] = line;
-      if (board[a] === mark && board[b] === mark) return c;
-      if (board[b] === mark && board[c] === mark) return a;
-      if (board[a] === mark && board[c] === mark) return b;
+      if (bd[a] === mark && bd[b] === mark && bd[c] === "") return c;
+      if (bd[b] === mark && bd[c] === mark && bd[a] === "") return a;
+      if (bd[a] === mark && bd[c] === mark && bd[b] === "") return b;
     }
     return undefined;
   }
 
-  function corners() { return [0, 2, 6, 8].filter((i) => !board[i]); }
+  function corners(bd) { return [0, 2, 6, 8].filter((i) => !bd[i]); }
 
   /* ---------- rendering ---------- */
   function render() {
@@ -110,7 +111,8 @@
     if (aiTurn) {
       setStatus("AI is thinking…");
       disableAll();
-      setTimeout(playAiMove, 350);
+      clearTimeout(aiTimer);
+      aiTimer = setTimeout(playAiMove, 350);
     } else {
       setStatus(current === HUMAN ? "Your turn" : "AI's turn");
     }
@@ -118,7 +120,10 @@
 
   // AI responds after the human moved.
   function playAiMove() {
+    aiTimer = null;
+    if (!running) return;                          // game over / restarted
     const move = aiBestMove(board);
+    if (!Number.isInteger(move) || board[move]) return;  // safety: valid empty cell
     placeMark(move, "O");
     afterMove();
   }
@@ -154,7 +159,7 @@
 
   // Recursive minimax: `maximizing` is true when it's O's turn (higher = better),
   // false when it's X's turn. Alpha-beta pruning keeps the tree fast.
-  function minimax(bd, maximizing, alpha, beta) {
+  function minimax(bd, maximizing, alpha = -Infinity, beta = Infinity) {
     const w = winFor(bd);
     if (w === "O") return 10 - depthOf(bd);
     if (w === "X") return depthOf(bd) - 10;
@@ -166,7 +171,14 @@
         bd[i] = maximizing ? "O" : "X";
         const s = minimax(bd, !maximizing, alpha, beta);
         bd[i] = "";
-        best = maximizing ? Math.max(best, s) : Math.min(best, s);
+        if (maximizing) {
+          best = Math.max(best, s);
+          alpha = Math.max(alpha, best);   // best score O is guaranteed so far
+        } else {
+          best = Math.min(best, s);
+          beta = Math.min(beta, best);     // best score X is guaranteed so far
+        }
+        if (beta <= alpha) break;          // remaining branches can't change `best`
       }
     }
     return best;
@@ -186,13 +198,14 @@
   // medium: attack → defend → center → corner(s) → random open cell
   function mediumMove(bd) {
     const order = [
-      winningMove("O"),       // try to win now
-      winningMove("X"),       // block opponent's win
-      ...corners(bd),         // corner cells if empty
-      4,                      // center if empty
+      winningMove(bd, "O"),   // try to win now
+      winningMove(bd, "X"),   // block opponent's win
+      4,                      // center if empty (strongest: in 4 lines)
+      ...corners(bd),         // corner cells if empty (in 3 lines)
       ...openCells(bd)        // any remaining open cell
     ];
-    for (const i of order.filter(Boolean)) {
+    // NOTE: filter(Boolean) would wrongly drop index 0 (falsy) — keep only undefined.
+    for (const i of order.filter((i) => i !== undefined)) {
       if (!bd[i]) return i;
     }
     return undefined;
@@ -203,9 +216,9 @@
   // easy: usually random but sometimes grabs a winning or blocking move
   function randomOrBluff(bd) {
     if (Math.random() < 0.4) {
-      const win = winningMove("O");
+      const win = winningMove(bd, "O");
       if (win !== undefined && !bd[win]) return win;
-      const block = winningMove("X");
+      const block = winningMove(bd, "X");
       if (block !== undefined && !bd[block]) return block;
     }
     return openCells(bd)[Math.floor(Math.random() * openCells(bd).length)] ?? 4;
@@ -217,21 +230,29 @@
     handleMove(idx);
   }));
 
-  modeSel.addEventListener("change", restart);
+  modeSel.addEventListener("change", resetAll);   // switching matchup → fresh board + score
 
-  restartBtn.addEventListener("click", restart);
+  restartBtn.addEventListener("click", newGame);  // New Game → new board, score kept
 
-  function restart() {
+  // Start a new round: resets the board but KEEPS the running score.
+  function newGame() {
+    clearTimeout(aiTimer);
+    aiTimer = null;
     board = Array(9).fill("");
     current = HUMAN;
     running = true;
-    scores = { X: 0, O: 0, draw: 0 };
     render();
     updateScores();
     setStatus(`Player ${HUMAN}'s turn`);
     cells.forEach((c) => (c.disabled = false));
   }
 
+  // Full reset (page load / mode change): board + scoreboard to zero.
+  function resetAll() {
+    scores = { X: 0, O: 0, draw: 0 };
+    newGame();
+  }
+
   // start fresh on load
-  restart();
+  resetAll();
 })();
