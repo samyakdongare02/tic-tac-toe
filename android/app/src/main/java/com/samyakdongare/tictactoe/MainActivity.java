@@ -32,7 +32,8 @@ public class MainActivity extends Activity {
         webView = new WebView(this);
         setContentView(webView);
 
-        // Serve the bundled assets and keep navigation inside the app.
+        // Serve bundled assets from the https appassets origin and keep any
+        // navigation to it inside the app; other origins go to the system.
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view,
@@ -43,8 +44,7 @@ public class MainActivity extends Activity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view,
                     WebResourceRequest request) {
-                Boolean handled = loader.shouldOverrideUrlLoading(request.getUrl());
-                return handled != null ? handled : false;
+                return !"appassets.androidplatform.net".equals(request.getUrl().getHost());
             }
         });
         webView.setBackgroundColor(0xFF0F172A);   // no white flash while loading
