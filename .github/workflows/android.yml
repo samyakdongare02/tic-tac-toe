@@ -109,13 +109,18 @@ jobs:
         run: gradle assembleDebug assembleRelease
 
       - name: Collect APK
-        run: cp android/app/build/outputs/apk/release/app-release.apk TicTacToe-1.0.2.apk
+        run: |
+          # single source of truth: the version lives in build.gradle
+          VERSION=$(grep -oP "versionName '\K[^']+" android/app/build.gradle | tail -n1)
+          cp android/app/build/outputs/apk/release/app-release.apk "TicTacToe-$VERSION.apk"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "Building TicTacToe-$VERSION.apk"
 
       - name: Validate APK metadata, signature and bundle
         run: |
           set -eo pipefail
           BT="$ANDROID_HOME/build-tools/35.0.0"
-          APK="TicTacToe-1.0.2.apk"
+          APK="TicTacToe-$VERSION.apk"
 
           echo "### Release APK validation" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
@@ -138,15 +143,15 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v7
         with:
-          name: TicTacToe-1.0.2-apk
-          path: TicTacToe-1.0.2.apk
+          name: TicTacToe-${{ env.VERSION }}-apk
+          path: TicTacToe-${{ env.VERSION }}.apk
           if-no-files-found: error
 
       - name: Attach to a GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v3
         with:
-          files: TicTacToe-1.0.2.apk
+          files: TicTacToe-${{ env.VERSION }}.apk
 
   # Runtime validation: install and launch the built APK on a real emulator,
   # verify the installed version, confirm the process survives, scan for

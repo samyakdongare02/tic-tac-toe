@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="neon">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -16,15 +16,23 @@
   <main class="game">
     <h1>Tic&nbsp;Tac&nbsp;Toe</h1>
 
-    <!-- Mode / Difficulty selector -->
-    <div class="controls">
-      <label class="mode-label" for="mode">Mode</label>
+    <!-- V2 toolbar: mode / difficulty + sound + fog + theme swatches -->
+    <div class="toolbar">
+      <label for="mode" class="mode-label sr-hidden" hidden>Mode</label>
       <select id="mode" aria-label="Game mode">
         <option value="pvp">2 Players</option>
         <option value="ai-easy">vs AI · Easy</option>
         <option value="ai-medium">vs AI · Medium</option>
         <option value="ai-hard">vs AI · Hard</option>
       </select>
+      <button id="sound" class="toggle" type="button" aria-label="Toggle sound">🔊 Sound</button>
+      <button id="fog" class="toggle" type="button" aria-label="Toggle fog mode: marks fade after two more moves">🌫 Fog</button>
+      <div id="themes" role="group" aria-label="Theme">
+        <button class="swatch on" type="button" data-theme="neon" aria-label="Neon theme" style="background:linear-gradient(135deg,#0f172a,#38bdf8,#f472b6)"></button>
+        <button class="swatch" type="button" data-theme="chalk" aria-label="Chalkboard theme" style="background:linear-gradient(135deg,#22332b,#f8fafc,#fcd34d)"></button>
+        <button class="swatch" type="button" data-theme="sunset" aria-label="Sunset theme" style="background:linear-gradient(135deg,#1f1130,#fb923c,#f43f5e)"></button>
+        <button class="swatch" type="button" data-theme="mono" aria-label="Monochrome theme" style="background:linear-gradient(135deg,#101214,#f8fafc,#9ca3af)"></button>
+      </div>
     </div>
 
     <!-- Status message -->
@@ -32,25 +40,33 @@
 
     <!-- Scoreboard -->
     <div class="scores">
-      <div class="score-box x"><span>X</span><strong id="scoreX">0</strong></div>
+      <div id="boxX" class="score-box x turn"><span>X</span><strong id="scoreX">0</strong></div>
       <div class="score-box draw"><span>Tie</span><strong id="scoreDraw">0</strong></div>
-      <div class="score-box o"><span>O</span><strong id="scoreO">0</strong></div>
+      <div id="boxO" class="score-box o"><span>O</span><strong id="scoreO">0</strong></div>
     </div>
 
-    <!-- The board -->
-    <div id="board" class="board" role="grid" aria-label="Tic-tac-toe board">
-      <button class="cell" data-index="0" role="gridcell" aria-label="Cell 1"></button>
-      <button class="cell" data-index="1" role="gridcell" aria-label="Cell 2"></button>
-      <button class="cell" data-index="2" role="gridcell" aria-label="Cell 3"></button>
-      <button class="cell" data-index="3" role="gridcell" aria-label="Cell 4"></button>
-      <button class="cell" data-index="4" role="gridcell" aria-label="Cell 5"></button>
-      <button class="cell" data-index="5" role="gridcell" aria-label="Cell 6"></button>
-      <button class="cell" data-index="6" role="gridcell" aria-label="Cell 7"></button>
-      <button class="cell" data-index="7" role="gridcell" aria-label="Cell 8"></button>
-      <button class="cell" data-index="8" role="gridcell" aria-label="Cell 9"></button>
+    <!-- The board + V2 overlays (strike-through SVG, confetti canvas) -->
+    <div id="bwrap">
+      <svg id="strike" viewBox="0 0 3 3" preserveAspectRatio="none" aria-hidden="true"></svg>
+      <canvas id="confetti" aria-hidden="true"></canvas>
+      <div id="board" class="board" role="grid" aria-label="Tic-tac-toe board">
+        <button class="cell" data-index="0" role="gridcell" aria-label="Cell 1"></button>
+        <button class="cell" data-index="1" role="gridcell" aria-label="Cell 2"></button>
+        <button class="cell" data-index="2" role="gridcell" aria-label="Cell 3"></button>
+        <button class="cell" data-index="3" role="gridcell" aria-label="Cell 4"></button>
+        <button class="cell" data-index="4" role="gridcell" aria-label="Cell 5"></button>
+        <button class="cell" data-index="5" role="gridcell" aria-label="Cell 6"></button>
+        <button class="cell" data-index="6" role="gridcell" aria-label="Cell 7"></button>
+        <button class="cell" data-index="7" role="gridcell" aria-label="Cell 8"></button>
+        <button class="cell" data-index="8" role="gridcell" aria-label="Cell 9"></button>
+      </div>
     </div>
 
-    <button id="restart" class="reset">New Game</button>
+    <!-- V2: Undo + New Game -->
+    <div class="ctl">
+      <button id="undo" type="button" disabled aria-label="Undo last move">↩ Undo</button>
+      <button id="restart" class="reset" type="button">New Game</button>
+    </div>
   </main>
 
   <script src="script.js"></script>

@@ -2,7 +2,7 @@
  * Hosted PWA: enables offline play + installability.
  * Android APK: served from the secure appassets origin, so it activates there
  * too; offline play also works without it, since assets ship with the app. */
-const CACHE = "tic-tac-toe-v3";
+const CACHE = "tic-tac-toe-v4";
 
 const ASSETS = [
   "./",

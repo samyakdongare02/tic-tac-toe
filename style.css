@@ -1,6 +1,8 @@
+/* ================= DESIGN TOKENS (V2) ================= */
 :root {
   --bg: #0f172a;
-  --panel: #1e293b;
+  --panel: rgba(30, 41, 59, 0.6);
+  --border: #334155;
   --x-color: #38bdf8;
   --o-color: #f472b6;
   --accent: #f59e0b;
@@ -8,6 +10,38 @@
   --muted: #94a3b8;
   --cell-bg: #334155;
   --win-bg: #22c55e;
+  --win-ink: #047857;
+  --title-grad: linear-gradient(90deg, var(--x-color), var(--o-color));
+  --btn-grad: linear-gradient(90deg, var(--x-color), var(--o-color));
+  --btn-ink: #0f172a;
+  --radius: 14px;
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Themes swap the tokens; layout never changes. */
+html[data-theme="chalk"] {
+  --bg: #22332b; --panel: rgba(24, 38, 32, 0.72); --border: #3f5449;
+  --cell-bg: #35473e; --x-color: #f8fafc; --o-color: #fcd34d;
+  --win-bg: #86efac; --win-ink: #14532d; --accent: #d9f99d;
+  --text: #f1f5f9; --muted: #a3b5ab;
+}
+html[data-theme="sunset"] {
+  --bg: #1f1130; --panel: rgba(58, 28, 74, 0.55); --border: #5b2a72;
+  --cell-bg: #3b1f4e; --x-color: #fb923c; --o-color: #f43f5e;
+  --win-bg: #facc15; --win-ink: #713f12; --accent: #fda4af;
+  --text: #fdf4ff; --muted: #c4b5fd;
+}
+html[data-theme="mono"] {
+  --bg: #101214; --panel: rgba(38, 42, 46, 0.6); --border: #33383d;
+  --cell-bg: #1f2327; --x-color: #f8fafc; --o-color: #9ca3af;
+  --win-bg: #e5e7eb; --win-ink: #111111; --accent: #71717a;
+  --text: #f4f4f5; --muted: #8a8f98;
+}
+html[data-theme="mono"] h1 {
+  background: none; color: var(--text);
+}
+html[data-theme="mono"] .reset {
+  background: #e5e7eb; color: #111;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -22,15 +56,23 @@ body {
   align-items: center;
   justify-content: center;
   padding: 24px;
+  transition: background 0.4s ease;
+}
+
+/* V2: barely-there grain so flat gradients read as material */
+body::after {
+  content: "";
+  position: fixed; inset: 0; pointer-events: none; opacity: 0.05; z-index: 0;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2"/></filter><rect width="120" height="120" filter="url(%23n)"/></svg>');
 }
 
 .game {
-  background: rgba(30, 41, 59, 0.6);
-  backdrop-filter: blur(8px);
-  border: 1px solid #334155;
+  background: var(--panel);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border);
   border-radius: 20px;
-  padding: 28px 32px 24px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  padding: 26px 28px 22px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
   text-align: center;
   max-width: 420px;
   width: 100%;
@@ -39,47 +81,86 @@ body {
 h1 {
   font-size: 2rem;
   letter-spacing: 2px;
-  margin-bottom: 18px;
-  background: linear-gradient(90deg, var(--x-color), var(--o-color));
+  margin-bottom: 14px;
+  background: var(--title-grad);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
-.controls { margin-bottom: 14px; }
-
+/* prensa ---------- toolbar (V2: mode + sound + fog + themes) */
+.toolbar {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+  gap: 8px; margin-bottom: 12px;
+}
 .mode-label {
   display: block;
   font-size: 0.8rem;
   color: var(--muted);
   margin-bottom: 6px;
 }
-
 select {
   background: var(--cell-bg);
   color: var(--text);
-  border: 1px solid #475569;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 8px 10px;
-  font-size: 0.95rem;
+  padding: 7px 9px;
+  font-size: 0.9rem;
   cursor: pointer;
 }
+.toggle {
+  background: var(--cell-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.toggle.off { opacity: 0.55; text-decoration: line-through; }
+#fog {
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  padding: 7px 12px;
+}
+#fog.on {
+  color: var(--win-ink);
+  border-color: var(--win-bg);
+  background: color-mix(in srgb, var(--win-bg) 25%, transparent);
+}
+#themes { display: flex; gap: 6px; }
+.swatch {
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 2px solid transparent; cursor: pointer; padding: 0;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+.swatch.on { border-color: var(--text); transform: scale(1.15); }
 
+/* status */
 .status {
   min-height: 1.6em;
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   font-weight: 600;
   margin-bottom: 16px;
   color: var(--text);
 }
+.status.thinking::after {                 /* animated dots while the AI thinks */
+  content: "…";
+  animation: dots 1.2s infinite;
+}
+@keyframes dots {
+  0%, 60%, 100% { opacity: 0.25; }
+  30% { opacity: 1; }
+}
 
+/* scoreboard — the current player's box breathes */
 .scores {
   display: flex;
   justify-content: space-between;
   gap: 10px;
   margin-bottom: 18px;
 }
-
 .score-box {
   flex: 1;
   background: var(--cell-bg);
@@ -88,12 +169,37 @@ select {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  transition: box-shadow 0.3s ease;
 }
-
 .score-box span { font-size: 0.75rem; color: var(--muted); }
 .score-box strong { font-size: 1.3rem; }
 .score-box.x strong { color: var(--x-color); }
 .score-box.o strong { color: var(--o-color); }
+.score-box.turn { animation: breathe 2s ease-in-out infinite; }
+.score-box.turn.x { color: var(--x-color); }
+.score-box.turn.o { color: var(--o-color); }
+@keyframes breathe {
+  0%, 100% { box-shadow: 0 0 0 transparent; }
+  50% { box-shadow: 0 0 14px color-mix(in srgb, currentColor 55%, transparent); }
+}
+
+/* board + overlay FX */
+#bwrap { position: relative; }
+#strike {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 2;
+  opacity: 0; transition: opacity 0.2s ease;
+}
+#strike.on { opacity: 1; }
+#strike path {
+  fill: none; stroke-width: 0.065;
+  stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 1; stroke-dashoffset: 1;
+}
+#strike path.s1 { transition: stroke-dashoffset 0.3s ease-out; }
+#strike path.s2 { transition: stroke-dashoffset 0.3s ease-out 0.3s; stroke-width: 0.045; opacity: 0.4; }
+#strike.ready path { stroke-dashoffset: 0; }
+#confetti { position: absolute; inset: 0; pointer-events: none; z-index: 3; }
 
 .board {
   display: grid;
@@ -103,44 +209,82 @@ select {
 }
 
 .cell {
+  position: relative;
   background: var(--cell-bg);
   border: none;
-  border-radius: 14px;
+  border-radius: var(--radius);
   font-size: clamp(2rem, 15vw, 3.4rem);
   font-weight: 700;
-  color: transparent;
+  color: transparent;             /* the raw character is logic-visible only (tests);
+                                     visuals are carried by the .glyph overlay */
   cursor: pointer;
-  touch-action: manipulation;   /* no double-tap zoom while playing */
+  touch-action: manipulation;     /* no double-tap zoom while playing */
   -webkit-user-select: none;
   user-select: none;
-  transition: transform 0.1s ease, background 0.2s ease;
+  transition: transform 0.15s var(--ease-spring), background 0.25s ease, opacity 0.45s ease;
+  --mk: var(--text);              /* default mark color; overridden per state */
 }
-
+.cell.enter { animation: drop 0.5s var(--ease-spring) both; animation-delay: var(--d, 0ms); }
+@keyframes drop {
+  from { transform: translateY(-18px) scale(0.85); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
 .cell:hover:not(:disabled) { transform: translateY(-2px); }
-.cell:active:not(:disabled) { transform: scale(0.92); }
-
+.cell:active:not(:disabled) { transform: scale(0.9); }
+.cell:focus-visible { outline: 2px solid var(--x-color); outline-offset: 2px; }
 .cell:disabled { cursor: not-allowed; }
 
-.cell.x { color: var(--x-color); }
-.cell.o { color: var(--o-color); }
-
+.cell.x { color: transparent; --mk: var(--x-color); }
+.cell.o { color: transparent; --mk: var(--o-color); }
+.cell.faded { opacity: 0.32; }                       /* V2 fog mode */
+.cell.last::after {                                  /* last-move corner dot */
+  content: "";
+  position: absolute; right: 7px; bottom: 7px;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--mk); opacity: 0.75;
+}
 .cell.win {
   background: var(--win-bg);
-  color: #047857;
-  animation: pop 0.4s ease;
+  color: transparent;             /* text stays hidden; glyph picks up win ink */
+  --mk: var(--win-ink);
+  animation: pop 0.4s var(--ease-spring);
 }
-
 @keyframes pop {
   0%   { transform: scale(0.8); }
-  60%  { transform: scale(1.1); }
+  60%  { transform: scale(1.12); }
   100% { transform: scale(1); }
 }
+.cell.out { transform: translateY(-16px) scale(0.86); opacity: 0; }
+
+/* hand-drawn X / O strokes */
+.glyph { position: absolute; inset: 0; width: 100%; height: 100%; color: var(--mk); }
+.glyph .st {
+  fill: none; stroke: currentColor; stroke-width: 11;
+  stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 1; stroke-dashoffset: 1;    /* drawn = dashoffset → 0 */
+}
+.glyph .st:nth-child(2) { transition-delay: 0.13s; }  /* second stroke of the X */
+.glyph.ready .st { transition: stroke-dashoffset 0.17s ease-out; }
+.glyph.instant .st { transition: none; stroke-dashoffset: 0; }
+
+/* controls */
+.ctl { margin-top: 18px; display: flex; gap: 10px; }
+#undo {
+  flex: 1; background: var(--cell-bg); color: var(--text);
+  border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px; font-size: 0.95rem; font-weight: 700;
+  cursor: pointer; touch-action: manipulation;
+  opacity: 0.45; transition: opacity 0.25s ease, filter 0.2s ease;
+}
+#undo:not(:disabled) { opacity: 1; }
+#undo:not(:disabled):hover { filter: brightness(1.15); }
+#undo:not(:disabled):active { transform: scale(0.97); }
 
 .reset {
-  margin-top: 20px;
+  flex: 1;
   width: 100%;
-  background: linear-gradient(90deg, var(--x-color), var(--o-color));
-  color: #0f172a;
+  background: var(--btn-grad);
+  color: var(--btn-ink);
   border: none;
   border-radius: 10px;
   padding: 12px;
@@ -150,6 +294,11 @@ select {
   touch-action: manipulation;
   transition: filter 0.2s ease;
 }
-
 .reset:hover { filter: brightness(1.1); }
 .reset:active { transform: scale(0.97); }
+
+/* accessibility: honor reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .cell.faded { opacity: 0.32 !important; }
+}
