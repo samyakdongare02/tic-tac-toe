@@ -113,6 +113,7 @@ select {
 }
 
 .cell:hover:not(:disabled) { transform: translateY(-2px); }
+.cell:active:not(:disabled) { transform: scale(0.92); }
 
 .cell:disabled { cursor: not-allowed; }
 
@@ -146,3 +147,4 @@ select {
 }
 
 .reset:hover { filter: brightness(1.1); }
+.reset:active { transform: scale(0.97); }

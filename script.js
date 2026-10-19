@@ -178,7 +178,7 @@
   function winFor(bd) {
     for (const line of LINES) {
       const [a, b, c] = line;
-      if (bd[a] && bd[a] === bd[b] === bd[c]) return bd[a];
+      if (bd[a] && bd[a] === bd[b] && bd[b] === bd[c]) return bd[a];
     }
     return null;
   }
